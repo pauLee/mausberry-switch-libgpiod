@@ -13,7 +13,7 @@ Fetch and install [the latest release][releases] directly on your Pi:
 
 ```bash
 # Download the package
-wget https://github.com/t-richards/mausberry-switch/releases/download/0.9/mausberry-switch_0.9_armhf.deb
+# wget https://github.com/t-richards/mausberry-switch/releases/download/0.9/mausberry-switch_0.9_armhf.deb
 
 # Install the package
 sudo dpkg -i mausberry-switch*.deb
@@ -96,7 +96,7 @@ Here's the output of `top` showing the CPU and RAM usage of this program:
 
 # Roadmap
 
- - [ ] Replace sysfs code with libgpiod (maybe?)
+ - Done: Replace sysfs code with libgpiod
 
 # License
 
