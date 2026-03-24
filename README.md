@@ -1,30 +1,50 @@
-# mausberry-switch
+# mausberry-switch-libgpiod
 
-This is a daemon for [Raspberry Pi][rpi] devices that monitors GPIO pins 23 and
-24, waiting for a high signal from a [Mausberry Circuits switch][mausberry-circuits]
-in order to poweroff the system safely. It is intended to replace the
-[official setup script][mausberry-script].
+A GPIO monitoring daemon for [Raspberry Pi][rpi] devices that uses [libgpiod][libgpiod] to watch for signals from a [Mausberry Circuits switch][mausberry-circuits] and safely power off the system.
+
+This is a fork of [t-richards/mausberry-switch][upstream] that replaces the legacy sysfs GPIO interface with the modern libgpiod library.
+
+## What changed from the original
+
+- **libgpiod instead of sysfs**: Uses the modern Linux GPIO character device API via libgpiod instead of the deprecated `/sys/class/gpio` interface.
+- **No more glib dependency**: The only runtime dependency is now `libgpiod2`.
+- **Proper signal handling**: Uses `sigaction()` and `sig_atomic_t` for safe, portable signal handling.
+- **Configuration file support**: Reads pin numbers, shutdown command, and delay from `/etc/mausberry-switch.conf`.
+- **Hardened systemd service**: Runs with `ProtectSystem=strict`, `NoNewPrivileges`, and other security restrictions.
+
+## Dependencies
+
+Build dependencies:
+
+- `libgpiod-dev` (>= 1.0)
+- `build-essential`
+- `dh-autoreconf`
+
+Runtime dependency:
+
+- `libgpiod2` (>= 1.0)
+
+## Building from source
+
+```bash
+autoreconf -i -f
+./configure
+make
+sudo make install
+```
 
 ## Installing
 
-This software is only supported on the latest version of Raspberry Pi OS (currently based on Debian Buster).
-
-Fetch and install [the latest release][releases] directly on your Pi:
+Fetch and install a release package directly on your Pi:
 
 ```bash
-# Download the package
-# wget https://github.com/t-richards/mausberry-switch/releases/download/0.9/mausberry-switch_0.9_armhf.deb
-
-# Install the package
-sudo dpkg -i mausberry-switch*.deb
+sudo dpkg -i mausberry-switch_*.deb
 sudo apt-get -f install
 ```
 
 ## Usage
 
 The `mausberry-switch` systemd service will be automatically enabled and started when you install the package.
-
-To stop or disable the service, the appropriate `systemctl` command should be used. For example:
 
 ```bash
 # Stop the service temporarily
@@ -34,19 +54,36 @@ sudo systemctl stop mausberry-switch
 sudo systemctl disable mausberry-switch
 ```
 
-Configuration options (such as input/output pins, shutdown command/delay) are available in the primary configuration file, `/etc/mausberry-switch.conf`.
+### Configuration
 
-After changing this file, you must restart the service to pick up the new configuration.
+All options are in `/etc/mausberry-switch.conf`:
+
+```ini
+[Pins]
+Out=23
+In=24
+
+[Config]
+ShutdownCommand=systemctl poweroff
+Delay=0
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `Out` | 23 | GPIO pin connected to the "out" lead |
+| `In` | 24 | GPIO pin connected to the "in" lead |
+| `ShutdownCommand` | `systemctl poweroff` | Command executed when the switch is toggled |
+| `Delay` | 0 | Seconds to wait before executing the shutdown command |
+
+After changing the configuration, restart the service:
 
 ```bash
 sudo systemctl restart mausberry-switch
 ```
 
-Please see the configuration file for documentation on each supported option.
+## Why not just use the official script?
 
-## Why not just use the official script available from their website?
-
-For reference, we're talking about this code:
+The [official Mausberry setup script][mausberry-script] polls GPIO state in a bash loop:
 
 ```bash
 while [ 1 = 1 ]; do
@@ -55,58 +92,25 @@ while [ 1 = 1 ]; do
 done
 ```
 
-In my opinion, if there's a wrong way to monitor GPIO pins, it is a bash script.
-I do have to give credit for strong adherence to the KISS principle -  21 lines
-of bash is hard to beat.
+This daemon instead uses libgpiod's event-based API to wait for GPIO edge events without burning CPU cycles. The process sleeps until the kernel signals a GPIO state change.
 
-However, on a Raspberry PI device, we're dealing with a processor that is a
-close relative to a piece of tinfoil. Just think about all the
-[poor, wasted clock cycles][wasted-clock] that occur while polling the GPIO
-state repeatedly.
+## Why libgpiod over sysfs?
 
-## Alright, what about one of those Python scripts?
+The Linux kernel's sysfs GPIO interface (`/sys/class/gpio`) has been [deprecated since Linux 4.8][gpio-deprecation]. libgpiod is the recommended replacement, providing:
 
-With raw access to GPIO and the ability to wait for GPIO events without wasting
-CPU time, Python is definitely a better way to go.
+- A stable, well-defined API
+- Proper resource management (no manual export/unexport)
+- Edge event detection without `poll(2)` on file descriptors
+- Better error handling and diagnostics
 
-So let's say you have a Model B rev 2 board with 512MB of RAM. After you give
-some to the GPU, you only **really** have 400MB or 500MB left. Each instance of
-the Python interpreter takes up roughly 4MB, and I don't consider that to be a
-small loss.
+## License
 
-## Okay then. Prove that yours really is better!
+Available as open source under the terms of the [MIT License][LICENSE].
 
-There's some fine [documentation on Linux kernel gpio/sysfs][gpio-sysfs] that
-tells us how the kernel can alert us when the value of a GPIO has changed. This
-eliminates the need for constant sampling of the GPIO. Here's how it works:
-
-1. Export the pins to userspace with `/sys/class/gpio/export` and set their direction with `/sys/class/gpio/gpioN/direction`.
-2. Set the value of `/sys/class/gpio/gpioN/edge` to setup an interrupt-generating pin.
-3. `poll(2)` on `/sys/class/gpio/gpioN/value` for the events POLLPRI and POLLERR
-4. Wait for poll to return and you've got a winner!
-
-In the context of Linux system calls, *poll* means "wait for events to occur",
-as opposed to the traditional definition of polling, which is more along the
-lines of "actively sampling".
-
-Here's the output of `top` showing the CPU and RAM usage of this program:
-
-      PID USER      PR  NI  VIRT  RES  SHR S  %CPU %MEM    TIME+  COMMAND
-    22682 root      20   0  1504  284  228 S   0.0  0.1   0:00.00 mausberry-switch
-
-# Roadmap
-
- - Done: Replace sysfs code with libgpiod
-
-# License
-
-The software is available as open source under the terms of the [MIT License][LICENSE].
-
-[build-doc]: doc/building.md
-[gpio-sysfs]: https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
+[gpio-deprecation]: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=79a9bece
+[libgpiod]: https://git.kernel.org/pub/scm/libs/libgpiod/libgpiod.git/about/
 [LICENSE]: LICENSE
 [mausberry-circuits]: http://mausberrycircuits.com/
 [mausberry-script]: http://files.mausberrycircuits.com/setup.sh
-[releases]: https://github.com/t-richards/mausberry-switch/releases
 [rpi]: http://www.raspberrypi.org/
-[wasted-clock]: http://www.raspberrypi.org/phpBB3/viewtopic.php?t=63561
+[upstream]: https://github.com/t-richards/mausberry-switch
