@@ -4,12 +4,12 @@ platform: linux
 version: v0.9.1
 section: default
 maintainer: Tom Richards <tom@tomrichards.net>
-description: GPIO monitoring service.
-homepage: https://github.com/t-richards/mausberry-switch
+description: GPIO monitoring daemon for Mausberry switches using libgpiod.
+homepage: https://github.com/pauLee/mausberry-switch-libgpiod
 license: MIT
 
 depends:
-  - 'libglib2.0-0 >= 2.50'
+  - 'libgpiod2 >= 1.0'
 
 contents:
   # Config file
