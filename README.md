@@ -35,10 +35,14 @@ sudo make install
 
 ## Installing
 
-Fetch and install a release package directly on your Pi:
+Download the [latest release (v0.9.1)][latest-release] and install it directly on your Pi:
 
 ```bash
-sudo dpkg -i mausberry-switch_*.deb
+# Download
+wget https://github.com/pauLee/mausberry-switch-libgpiod/releases/download/v0.9.1/mausberry-switch_0.9.1_armhf.deb
+
+# Install
+sudo dpkg -i mausberry-switch_0.9.1_armhf.deb
 sudo apt-get -f install
 ```
 
@@ -113,4 +117,5 @@ Available as open source under the terms of the [MIT License][LICENSE].
 [mausberry-circuits]: http://mausberrycircuits.com/
 [mausberry-script]: http://files.mausberrycircuits.com/setup.sh
 [rpi]: http://www.raspberrypi.org/
+[latest-release]: https://github.com/pauLee/mausberry-switch-libgpiod/releases/latest
 [upstream]: https://github.com/t-richards/mausberry-switch
