@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install deps
-        run: apk add --no-cache --update alpine-sdk automake autoconf clang clang-analyzer libgpiod-dev libtool
+        run: apk add --no-cache --update alpine-sdk automake autoconf clang clang-analyzer libgpiod-dev libtool pkgconf
 
       - name: Autoreconf
         run: autoreconf -i -f
@@ -61,7 +61,7 @@ jobs:
       - name: Install deps
         run: |
           apt-get update -q
-          apt-get install -qy build-essential dh-autoreconf libgpiod-dev
+          apt-get install -qy build-essential dh-autoreconf libgpiod-dev pkg-config
 
       - name: Autoreconf
         run: autoreconf -i -f
@@ -94,7 +94,7 @@ jobs:
         run: |
           dpkg --add-architecture armhf
           apt-get update -q
-          apt-get install -qy crossbuild-essential-armhf curl dh-autoreconf libgpiod-dev:armhf
+          apt-get install -qy crossbuild-essential-armhf curl dh-autoreconf libgpiod-dev:armhf pkg-config
 
       - name: Create install directory
         run: mkdir -p /tmp/installdir
