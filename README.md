@@ -39,7 +39,7 @@ Download the [latest release (v0.9.1)][latest-release] and install it directly o
 
 ```bash
 # Download
-wget https://github.com/pauLee/mausberry-switch-libgpiod/releases/download/v0.9.1/mausberry-switch_0.9.1_armhf.deb
+wget https://github.com/tomcek42/mausberry-switch-libgpiod/releases/download/v0.9.1/mausberry-switch_0.9.1_armhf.deb
 
 # Install
 sudo dpkg -i mausberry-switch_0.9.1_armhf.deb
